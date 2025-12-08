@@ -189,71 +189,30 @@ with tab1:
     
     st.markdown("---")
     
-    # Row 2: Protocol/Service/Flag with proper dropdowns
+    # Row 2: Protocol/Service/Flag with DIRECT NUMERICAL INPUT
     col4, col5, col6 = st.columns(3)
     
-    # PROTOCOL MAPPING
-    protocol_map = {
-        'tcp': 6,
-        'udp': 17,
-        'icmp': 1
-    }
-    
-    # SERVICE MAPPING (Top common services from NSL-KDD)
-    service_map = {
-        'http': 0,
-        'smtp': 1,
-        'finger': 2,
-        'domain': 3,
-        'telnet': 4,
-        'ssh': 5,
-        'ftp': 6,
-        'private': 7,
-        'pop_3': 8,
-        'nntp': 9,
-        'echo': 10,
-        'imap4': 11,
-        'other': 12
-    }
-    
-    # FLAG MAPPING (Connection flags from NSL-KDD)
-    flag_map = {
-        'SF': 0,      # SYN-FIN (Normal connection)
-        'S0': 1,      # SYN-Reset (Attack)
-        'REJ': 2,     # Rejected
-        'RSTR': 3,    # Reset
-        'S1': 4,      # SYN-Received
-        'S2': 5,      # SYN-Sent
-        'S3': 6,      # SYN-FIN-Wait
-        'FSRPAUEC': 7,# Other
-        'OTH': 8      # Other
-    }
-    
     with col4:
-        protocol_name = st.selectbox(
-            "Protocol Type",
-            list(protocol_map.keys()),
-            help="TCP=Normal, UDP=Data, ICMP=Ping"
-        )
-        input_data['protocol_type'] = float(protocol_map[protocol_name])
+        st.write("**Protocol Type** (0-255)")
+        protocol_choice = st.radio("Select Protocol:", ["TCP (6)", "UDP (17)", "ICMP (1)"], horizontal=True)
+        if "TCP" in protocol_choice:
+            input_data['protocol_type'] = 6.0
+        elif "UDP" in protocol_choice:
+            input_data['protocol_type'] = 17.0
+        else:
+            input_data['protocol_type'] = 1.0
     
     with col5:
-        service_name = st.selectbox(
-            "Service",
-            list(service_map.keys()),
-            help="http=Web, smtp=Email, ftp=File Transfer, etc."
-        )
-        input_data['service'] = float(service_map[service_name])
+        st.write("**Service Type**")
+        service_choice = st.radio("Select Service:", ["HTTP (0)", "SMTP (1)", "FTP (6)", "SSH (5)", "Other (12)"], horizontal=True)
+        service_num = int(service_choice.split("(")[1].split(")")[0])
+        input_data['service'] = float(service_num)
     
     with col6:
-        flag_name = st.selectbox(
-            "Connection Flag",
-            list(flag_map.keys()),
-            help="SF=Normal, S0=SYN-Attack, REJ=Rejected"
-        )
-        input_data['flag'] = float(flag_map[flag_name])
-    
-    st.markdown("---")
+        st.write("**Connection Flag**")
+        flag_choice = st.radio("Select Flag:", ["SF - Normal (0)", "S0 - Attack (1)", "REJ (2)"], horizontal=True)
+        flag_num = int(flag_choice.split("(")[1].split(")")[0])
+        input_data['flag'] = float(flag_num)
     
     # Row 3: Additional Features
     col7, col8, col9 = st.columns(3)
@@ -303,11 +262,7 @@ with tab1:
 # Analyze Button
     if st.button("🔍 ANALYZE TRAFFIC", use_container_width=True):
         try:
-            # Validate input data
-            if not input_data:
-                st.error("❌ Please fill in the form!")
-            
-            # Ensure all required features exist with defaults
+            # Create complete feature dictionary with defaults
             all_features = {
                 'duration': 0, 'protocol_type': 0, 'service': 0, 'flag': 0,
                 'src_bytes': 0, 'dst_bytes': 0, 'land': 0, 'wrong_fragment': 0,
@@ -325,43 +280,41 @@ with tab1:
                 'dst_host_rerror_rate': 0.0, 'dst_host_srv_rerror_rate': 0.0
             }
             
-            # Update with user input
+            # Update with user inputs
             all_features.update(input_data)
             
-            # Create feature array
-            if feature_names:
-                X_input = np.array([[float(all_features.get(fname, 0.0)) for fname in feature_names]])
-            else:
-                # Fallback: use predefined feature order
-                feature_order = [
-                    'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
-                    'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
-                    'num_compromised', 'root_shell', 'su_attempted', 'num_root',
-                    'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds',
-                    'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate',
-                    'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
-                    'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
-                    'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
-                    'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
-                    'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
-                ]
-                X_input = np.array([[float(all_features.get(fname, 0.0)) for fname in feature_order]])
+            # Feature order (EXACT NSL-KDD order)
+            feature_order = [
+                'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
+                'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
+                'num_compromised', 'root_shell', 'su_attempted', 'num_root',
+                'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds',
+                'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate',
+                'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
+                'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
+                'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
+                'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
+                'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
+            ]
             
-            # Scale if scaler available
-            if scaler:
+            # Create numpy array
+            X_input = np.array([[float(all_features[fname]) for fname in feature_order]])
+            
+            # Scale data if scaler exists
+            if scaler is not None:
                 X_scaled = scaler.transform(X_input)
             else:
                 X_scaled = X_input
             
             # Make prediction
-            pred = model.predict(X_scaled)[0]
-            proba = model.predict_proba(X_scaled)[0]
-            conf = max(proba) * 100
+            prediction = model.predict(X_scaled)[0]
+            probabilities = model.predict_proba(X_scaled)[0]
+            confidence = max(probabilities) * 100
             
             st.markdown("---")
             
-            if pred == 0:
-                # NORMAL TRAFFIC
+            if prediction == 0:
+                # NORMAL TRAFFIC RESULT
                 st.markdown(
                     '<div class="result-box result-normal">✅ NORMAL TRAFFIC DETECTED</div>',
                     unsafe_allow_html=True
@@ -369,16 +322,24 @@ with tab1:
                 
                 col_m1, col_m2, col_m3 = st.columns(3)
                 with col_m1:
-                    st.metric("Confidence", f"{conf:.2f}%")
+                    st.metric("🔒 Confidence Level", f"{confidence:.2f}%")
                 with col_m2:
-                    st.metric("Threat Level", "LOW")
+                    st.metric("⚠️ Threat Level", "🟢 LOW")
                 with col_m3:
-                    st.metric("Action", "ALLOW")
+                    st.metric("✅ Action Taken", "ALLOW")
                 
-                st.success("✅ This traffic pattern is safe. Connection allowed!")
+                st.success("✅ **This traffic is SAFE.** No malicious activity detected. Connection ALLOWED!")
+                
+                # Additional info
+                with st.expander("📊 Traffic Analysis Details"):
+                    st.write(f"• Duration: {all_features['duration']} seconds")
+                    st.write(f"• Protocol: {all_features['protocol_type']}")
+                    st.write(f"• Source Bytes: {all_features['src_bytes']}")
+                    st.write(f"• Destination Bytes: {all_features['dst_bytes']}")
+                    st.write(f"• Confidence: {confidence:.2f}%")
             
             else:
-                # ATTACK DETECTED
+                # ATTACK DETECTED RESULT
                 st.markdown(
                     '<div class="result-box result-attack">🚨 ATTACK DETECTED!</div>',
                     unsafe_allow_html=True
@@ -386,17 +347,25 @@ with tab1:
                 
                 col_m1, col_m2, col_m3 = st.columns(3)
                 with col_m1:
-                    st.metric("Confidence", f"{conf:.2f}%")
+                    st.metric("🔒 Confidence Level", f"{confidence:.2f}%")
                 with col_m2:
-                    st.metric("Threat Level", "HIGH")
+                    st.metric("⚠️ Threat Level", "🔴 HIGH")
                 with col_m3:
-                    st.metric("Action", "BLOCK")
+                    st.metric("❌ Action Taken", "BLOCK IP")
                 
-                st.error("🚨 INTRUSION DETECTED - IP Address will be BLOCKED immediately!")
+                st.error("🚨 **INTRUSION DETECTED!** Malicious traffic pattern identified. IP address BLOCKED immediately!")
+                
+                # Attack details
+                with st.expander("🚨 Attack Analysis Details"):
+                    st.write(f"• Attack Type: Potential DoS/Probe/R2L/U2R")
+                    st.write(f"• Confidence: {confidence:.2f}%")
+                    st.write(f"• Count: {all_features['count']}")
+                    st.write(f"• Error Rate: {all_features['serror_rate']}")
+                    st.write(f"• Recommended Action: BLOCK SOURCE IP")
         
         except Exception as e:
-            st.error(f"❌ Prediction Error: {str(e)}")
-            st.info("💡 Tip: Make sure all required fields are filled in properly.")
+            st.error(f"❌ Error: {str(e)}")
+            st.write(f"**Debug Info:** {type(e).__name__}")
 
 # ============================================================================
 # TAB 2: BATCH CSV ANALYSIS
