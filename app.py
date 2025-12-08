@@ -5,50 +5,61 @@ import joblib
 import gdown
 import os
 
+# ============================================================================
+# PAGE CONFIGURATION
+# ============================================================================
 st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 
+# ============================================================================
 # 🔴 PASTE YOUR GOOGLE DRIVE FILE IDs HERE 🔴
-MODEL_FILE_ID = "1ROjXla7J_wAEpaWBVPFR88pOxlZRAmbe"
-SCALER_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
-FEATURES_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
-# ⚠️ Encoders ab use nahi karenge, isliye isko optional chhodo
-ENCODERS_FILE_ID = ""
+# ============================================================================
+MODEL_FILE_ID = "PASTE_MODEL_FILE_ID_HERE"
+SCALER_FILE_ID = "PASTE_SCALER_FILE_ID_HERE"
+FEATURES_FILE_ID = "PASTE_FEATURES_FILE_ID_HERE"
+
+# ============================================================================
+# FILE DOWNLOADER
+# ============================================================================
 
 @st.cache_resource
 def download_file(file_id, output_name):
-    if file_id.startswith("PASTE_") or file_id == "":
-        # sirf warning dikha do, but app crash mat karo
-        st.warning(f"ℹ️ {output_name} FILE_ID not set, assuming file already present.")
+    """Download file from Google Drive"""
+    if file_id.startswith("PASTE_"):
+        st.warning(f"ℹ️ {output_name} FILE_ID not set. Make sure file exists locally.")
+        return None
+    
     if not os.path.exists(output_name):
-        if file_id.startswith("PASTE_") or file_id == "":
-            return None
         url = f'https://drive.google.com/uc?id={file_id}'
         try:
             gdown.download(url, output_name, quiet=False)
         except Exception as e:
             st.error(f"❌ Download Error ({output_name}): {str(e)}")
             return None
+    
     return output_name
 
 @st.cache_resource
 def load_model_and_utils():
+    """Load all model files - NO ENCODERS"""
     try:
+        # Download files
         download_file(MODEL_FILE_ID, 'idps_model.joblib')
         download_file(SCALER_FILE_ID, 'feature_scaler.joblib')
         download_file(FEATURES_FILE_ID, 'feature_names.joblib')
-        # label_encoders ko ab load bhi nahi kar rahe
 
+        # Load files
         model = joblib.load('idps_model.joblib')
         scaler = joblib.load('feature_scaler.joblib')
         feature_names = joblib.load('feature_names.joblib')
 
-        # return label_encoders ki jagah None
         return model, scaler, feature_names
     except Exception as e:
         st.error(f"❌ Error loading files: {str(e)}")
         return None, None, None
 
-# ================= CSS same as pehle =================
+# ============================================================================
+# CSS STYLING
+# ============================================================================
 st.markdown("""
     <style>
         .header-container {
@@ -98,6 +109,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ============================================================================
+# MAIN APP
+# ============================================================================
+
 st.markdown("""
     <div class="header-container">
         <p class="header-title">🛡️ IDPS - AI Intrusion Detection System</p>
@@ -113,9 +128,15 @@ if model is None:
 
 st.success("✅ Model Loaded Successfully!")
 
+# ============================================================================
+# TABS
+# ============================================================================
+
 tab1, tab2, tab3 = st.tabs(["📊 Manual Analysis", "📁 Batch CSV", "ℹ️ About"])
 
-# ===================== TAB 1: MANUAL ANALYSIS =====================
+# ============================================================================
+# TAB 1: MANUAL ANALYSIS
+# ============================================================================
 
 with tab1:
     st.markdown("## 📝 Enter Network Traffic Features (NSL-KDD Format)")
@@ -150,12 +171,13 @@ with tab1:
     st.markdown("---")
 
     # ========== MANUAL MAPPINGS FOR CATEGORICAL FEATURES ==========
-
+    
+    # Protocol mapping
     protocol_map = {'tcp': 6, 'udp': 17, 'icmp': 1}
     protocol_name = st.selectbox("Protocol Type", list(protocol_map.keys()))
     features_dict['protocol_type'] = protocol_map[protocol_name]
 
-    # yahan tum realistic limited services rakh sakte ho
+    # Service mapping
     service_map = {
         'http': 0,
         'smtp': 1,
@@ -171,6 +193,7 @@ with tab1:
     service_name = st.selectbox("Service", list(service_map.keys()))
     features_dict['service'] = service_map[service_name]
 
+    # Flag mapping
     flag_map = {
         'SF': 0,
         'S0': 1,
@@ -187,7 +210,7 @@ with tab1:
 
     st.markdown("---")
 
-    # Baki features ko default 0 de do
+    # Remaining features with default values
     remaining_features = [
         'root_shell', 'su_attempted', 'num_root', 'num_file_creations',
         'num_shells', 'num_access_files', 'num_outbound_cmds', 'is_host_login',
@@ -198,20 +221,26 @@ with tab1:
         'dst_host_serror_rate', 'dst_host_srv_serror_rate',
         'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
     ]
+    
     for feat in remaining_features:
         if feat not in features_dict:
             features_dict[feat] = 0
 
     if st.button("🔍 ANALYZE TRAFFIC", use_container_width=True):
         try:
-            # feature_names order ke according array banao
-            X_input = np.array([[features_dict[fname] for fname in feature_names]])
+            # Create feature array in correct order based on feature_names
+            X_input = np.array([[features_dict.get(fname, 0) for fname in feature_names]])
+            
+            # Scale the input
             X_scaled = scaler.transform(X_input)
+            
+            # Make prediction
             pred = model.predict(X_scaled)[0]
             proba = model.predict_proba(X_scaled)[0]
             conf = max(proba) * 100
 
             st.markdown("---")
+            
             if pred == 0:
                 st.markdown('<div class="result-box result-normal">✅ NORMAL TRAFFIC DETECTED</div>', unsafe_allow_html=True)
                 col_a, col_b = st.columns(2)
@@ -229,27 +258,41 @@ with tab1:
                 st.error("⚠️ INTRUSION DETECTED - Taking preventive action...")
 
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.error(f"❌ Error during analysis: {str(e)}")
+            st.error(f"Debug Info: {type(e).__name__}")
 
-# ===================== TAB 2: BATCH CSV ANALYSIS =====================
+# ============================================================================
+# TAB 2: BATCH CSV ANALYSIS
+# ============================================================================
 
 with tab2:
     st.markdown("## 📁 Batch CSV Analysis (NSL-KDD Format)")
+    st.info("📌 CSV must have columns: duration, protocol_type, service, flag, src_bytes, dst_bytes, etc. (41 features)")
+    
     file = st.file_uploader("Upload CSV file", type=['csv'])
 
     if file:
         try:
             df = pd.read_csv(file)
             st.dataframe(df.head(10), use_container_width=True)
-
+            
             if st.button("🔍 ANALYZE BATCH", use_container_width=True):
                 try:
+                    # Extract features in correct order
                     X_batch = df[feature_names]
+                    
+                    # Scale
                     X_scaled_batch = scaler.transform(X_batch)
+                    
+                    # Predict
                     preds = model.predict(X_scaled_batch)
+                    probas = model.predict_proba(X_scaled_batch)
 
+                    # Add predictions to dataframe
                     df['Prediction'] = ['🟢 Normal' if p == 0 else '🔴 Attack' for p in preds]
+                    df['Confidence'] = [f"{max(proba)*100:.2f}%" for proba in probas]
 
+                    # Count results
                     normal = (preds == 0).sum()
                     attack = (preds == 1).sum()
 
@@ -259,16 +302,22 @@ with tab2:
                     with col2:
                         st.markdown(f'<div class="metric-card"><div>Attacks</div><div class="metric-value" style="color:#dc3545;">{attack}</div></div>', unsafe_allow_html=True)
 
-                    st.dataframe(df, use_container_width=True)
+                    st.markdown("---")
+                    st.dataframe(df[['Prediction', 'Confidence', 'duration', 'src_bytes', 'dst_bytes']], use_container_width=True)
 
+                    # Download button
                     csv_data = df.to_csv(index=False)
-                    st.download_button("📥 Download Results", csv_data, "idps_results.csv")
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-        except Exception as e:
-            st.error(f"❌ CSV Error: {str(e)}")
+                    st.download_button("📥 Download Results", csv_data, "idps_results.csv", "text/csv")
 
-# ===================== TAB 3: ABOUT =====================
+                except Exception as e:
+                    st.error(f"❌ Analysis Error: {str(e)}")
+                    st.error(f"Debug Info: {type(e).__name__}")
+        except Exception as e:
+            st.error(f"❌ CSV Load Error: {str(e)}")
+
+# ============================================================================
+# TAB 3: ABOUT
+# ============================================================================
 
 with tab3:
     st.markdown("""
@@ -295,4 +344,11 @@ with tab3:
     - **Accuracy:** High precision detection
     - **Recall:** Catches most real attacks
     - **F1-Score:** Balanced detection
+    
+    ### 🔧 Features Used
+    - Network traffic duration
+    - Data transfer rates (bytes)
+    - Connection flags and protocols
+    - Error rates (SYN, Reset, etc.)
+    - Host and service patterns
     """)
