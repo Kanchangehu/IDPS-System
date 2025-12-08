@@ -143,6 +143,8 @@ tab1, tab2, tab3 = st.tabs(["📊 Manual Analysis", "📁 Batch CSV", "ℹ️ Ab
 
 with tab1:
     st.markdown("## 📝 Enter Network Traffic Features (NSL-KDD Format)")
+
+    input_data = {}
     
     col1, col2, col3 = st.columns(3)
     
