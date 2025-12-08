@@ -174,30 +174,74 @@ with tab1:
     
     st.markdown("---")
     
-    col_protocol, col_service, col_flag = st.columns(3)
+    col4, col5, col6 = st.columns(3)
     
-    with col_protocol:
-        protocol_type = st.selectbox("Protocol Type", ['tcp', 'udp', 'icmp'])
-        features_dict['protocol_type'] = label_encoders['protocol_type'].transform([protocol_type])[0]
+    with col4:
+        proto = st.selectbox("Protocol", ['tcp', 'udp', 'icmp'])
+        # Safe encoding with error handling
+        try:
+            encoded_proto = label_encoders['protocol_type'].transform([proto.lower()])[0]
+            input_data['protocol_type'] = float(encoded_proto)
+        except:
+            input_data['protocol_type'] = 0.0
     
-    with col_service:
-        service = st.selectbox("Service", label_encoders['service'].classes_[:20])
-        features_dict['service'] = label_encoders['service'].transform([service])[0]
+    with col5:
+        services_list = list(label_encoders['service'].classes_)[:50]
+        service = st.selectbox("Service", services_list)
+        try:
+            encoded_service = label_encoders['service'].transform([service])[0]
+            input_data['service'] = float(encoded_service)
+        except:
+            input_data['service'] = 0.0
     
-    with col_flag:
-        flag = st.selectbox("Flag", label_encoders['flag'].classes_)
-        features_dict['flag'] = label_encoders['flag'].transform([flag])[0]
+    with col6:
+        flags_list = list(label_encoders['flag'].classes_)
+        flag = st.selectbox("Flag", flags_list)
+        try:
+            encoded_flag = label_encoders['flag'].transform([flag])[0]
+            input_data['flag'] = float(encoded_flag)
+        except:
+            input_data['flag'] = 0.0
     
     st.markdown("---")
     
-    # Add remaining features with default values
-    remaining_features = ['root_shell', 'su_attempted', 'num_root', 'num_file_creations',
-                         'num_shells', 'num_access_files', 'num_outbound_cmds', 'is_host_login',
-                         'is_guest_login', 'count', 'srv_count', 'diff_srv_rate',
-                         'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
-                         'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
-                         'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
-                         'dst_host_rerror_rate', 'dst_host_srv_rerror_rate']
+    # Add default values for remaining features
+    for feat in feature_names:
+        if feat not in input_data:
+            input_data[feat] = 0.0
+    
+    if st.button("🔍 ANALYZE TRAFFIC", use_container_width=True):
+        try:
+            # Create feature array in correct order
+            X_input = np.array([[float(input_data.get(fname, 0.0)) for fname in feature_names]])
+            
+            # Scale
+            X_scaled = scaler.transform(X_input)
+            
+            # Predict
+            pred = model.predict(X_scaled)[0]
+            proba = model.predict_proba(X_scaled)[0]
+            conf = max(proba) * 100
+            
+            st.markdown("---")
+            
+            if pred == 0:
+                st.markdown('<div class="result-box result-normal">✅ NORMAL TRAFFIC</div>', unsafe_allow_html=True)
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    st.metric("Confidence", f"{conf:.2f}%")
+                with col_m2:
+                    st.metric("Threat Level", "LOW")
+            else:
+                st.markdown('<div class="result-box result-attack">🚨 ATTACK DETECTED</div>', unsafe_allow_html=True)
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    st.metric("Confidence", f"{conf:.2f}%")
+                with col_m2:
+                    st.metric("Threat Level", "HIGH")
+        
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
     
     for feat in remaining_features:
         features_dict[feat] = 0
