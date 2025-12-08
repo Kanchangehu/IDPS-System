@@ -126,7 +126,7 @@ st.markdown("""
 GOOGLE_DRIVE_FILE_ID = "1OuPeB1FmQWWpmobpZ_YYT8_pG16sFlDc"  # ← YAHAN APNA FILE ID LIKHO!
 
 # Model load karo
-model = download_model_from_drive(1OuPeB1FmQWWpmobpZ_YYT8_pG16sFlDc)
+model = download_model_from_drive("1OuPeB1FmQWWpmobpZ_YYT8_pG16sFlDc")
 
 if model is None:
     st.error("❌ Model load nahi ho saka! File ID check karo")
