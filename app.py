@@ -214,10 +214,6 @@ with tab1:
             # Make prediction
             prediction = model.predict(X)[0]
             
-            # ✅ FLIP PREDICTION (TEMPORARY FIX)
-            # If model is inverted, flip it
-            prediction = 1 - prediction
-            
             # Get probabilities - SAFE WAY
             proba = model.predict_proba(X)[0]
             
@@ -225,8 +221,6 @@ with tab1:
             if len(proba) == 2:
                 normal_prob = proba[0] * 100
                 attack_prob = proba[1] * 100
-                # FLIP for display too
-                normal_prob, attack_prob = attack_prob, normal_prob
             else:
                 # Single class prediction
                 normal_prob = 50.0
@@ -296,9 +290,6 @@ with tab2:
                     # Predict
                     predictions = model.predict(X)
                     
-                    # ✅ FLIP PREDICTIONS
-                    predictions = 1 - predictions
-                    
                     # Add results
                     df['Prediction'] = ['🟢 Normal' if p == 0 else '🔴 Attack' for p in predictions]
                     
@@ -351,5 +342,5 @@ with tab3:
     **Attack Traffic:** High error rates, suspicious flags, unusual byte counts
     
     ---
-    *IDPS v4.0 | Fixed Prediction Logic | December 2025*
+    *IDPS v5.0 | Production Ready | December 2025*
     """)
