@@ -14,10 +14,10 @@ st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 # ---------------------------
 # 🔴 Paste your Google Drive file IDs here (replace the placeholders)
 # ---------------------------
-MODEL_FILE_ID = "PASTE_MODEL_FILE_ID_HERE"
-SCALER_FILE_ID = "PASTE_SCALER_FILE_ID_HERE"
-FEATURES_FILE_ID = "PASTE_FEATURES_FILE_ID_HERE"
-ENCODERS_FILE_ID = "PASTE_ENCODERS_FILE_ID_HERE"
+MODEL_FILE_ID = "1ROjXla7J_wAEpaWBVPFR88pOxlZRAmbe"
+SCALER_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
+FEATURES_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
+ENCODERS_FILE_ID = "13fsMK6xKJrk9uQ0S5p-PxarUYYqrGKOT"
 
 # =======================================================================
 # UTIL: download files from Drive (via gdown)
