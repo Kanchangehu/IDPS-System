@@ -300,14 +300,52 @@ with tab1:
     
     st.markdown("---")
     
-    # Analyze Button
+# Analyze Button
     if st.button("🔍 ANALYZE TRAFFIC", use_container_width=True):
         try:
-            # Ensure all features exist
+            # Validate input data
+            if not input_data:
+                st.error("❌ Please fill in the form!")
+            
+            # Ensure all required features exist with defaults
+            all_features = {
+                'duration': 0, 'protocol_type': 0, 'service': 0, 'flag': 0,
+                'src_bytes': 0, 'dst_bytes': 0, 'land': 0, 'wrong_fragment': 0,
+                'urgent': 0, 'hot': 0, 'num_failed_logins': 0, 'logged_in': 0,
+                'num_compromised': 0, 'root_shell': 0, 'su_attempted': 0,
+                'num_root': 0, 'num_file_creations': 0, 'num_shells': 0,
+                'num_access_files': 0, 'num_outbound_cmds': 0, 'is_host_login': 0,
+                'is_guest_login': 0, 'count': 0, 'srv_count': 0, 'serror_rate': 0.0,
+                'srv_serror_rate': 0.0, 'rerror_rate': 0.0, 'srv_rerror_rate': 0.0,
+                'same_srv_rate': 0.0, 'diff_srv_rate': 0.0, 'srv_diff_host_rate': 0.0,
+                'dst_host_count': 0, 'dst_host_srv_count': 0,
+                'dst_host_same_srv_rate': 0.0, 'dst_host_diff_srv_rate': 0.0,
+                'dst_host_same_src_port_rate': 0.0, 'dst_host_srv_diff_host_rate': 0.0,
+                'dst_host_serror_rate': 0.0, 'dst_host_srv_serror_rate': 0.0,
+                'dst_host_rerror_rate': 0.0, 'dst_host_srv_rerror_rate': 0.0
+            }
+            
+            # Update with user input
+            all_features.update(input_data)
+            
+            # Create feature array
             if feature_names:
-                X_input = np.array([[input_data.get(fname, 0.0) for fname in feature_names]])
+                X_input = np.array([[float(all_features.get(fname, 0.0)) for fname in feature_names]])
             else:
-                X_input = np.array([[float(v) for v in input_data.values()]])
+                # Fallback: use predefined feature order
+                feature_order = [
+                    'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
+                    'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
+                    'num_compromised', 'root_shell', 'su_attempted', 'num_root',
+                    'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds',
+                    'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate',
+                    'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
+                    'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
+                    'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
+                    'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
+                    'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
+                ]
+                X_input = np.array([[float(all_features.get(fname, 0.0)) for fname in feature_order]])
             
             # Scale if scaler available
             if scaler:
@@ -315,7 +353,7 @@ with tab1:
             else:
                 X_scaled = X_input
             
-            # Predict
+            # Make prediction
             pred = model.predict(X_scaled)[0]
             proba = model.predict_proba(X_scaled)[0]
             conf = max(proba) * 100
@@ -323,7 +361,7 @@ with tab1:
             st.markdown("---")
             
             if pred == 0:
-                # Normal Traffic
+                # NORMAL TRAFFIC
                 st.markdown(
                     '<div class="result-box result-normal">✅ NORMAL TRAFFIC DETECTED</div>',
                     unsafe_allow_html=True
@@ -335,10 +373,12 @@ with tab1:
                 with col_m2:
                     st.metric("Threat Level", "LOW")
                 with col_m3:
-                    st.metric("Action", "NONE")
+                    st.metric("Action", "ALLOW")
+                
+                st.success("✅ This traffic pattern is safe. Connection allowed!")
             
             else:
-                # Attack Detected
+                # ATTACK DETECTED
                 st.markdown(
                     '<div class="result-box result-attack">🚨 ATTACK DETECTED!</div>',
                     unsafe_allow_html=True
@@ -352,10 +392,11 @@ with tab1:
                 with col_m3:
                     st.metric("Action", "BLOCK")
                 
-                st.error("⚠️ INTRUSION DETECTED - Taking preventive action...")
+                st.error("🚨 INTRUSION DETECTED - IP Address will be BLOCKED immediately!")
         
         except Exception as e:
             st.error(f"❌ Prediction Error: {str(e)}")
+            st.info("💡 Tip: Make sure all required fields are filled in properly.")
 
 # ============================================================================
 # TAB 2: BATCH CSV ANALYSIS
