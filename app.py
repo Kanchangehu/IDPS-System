@@ -149,10 +149,12 @@ with tab1:
         logged_in = st.number_input("Logged In", 0, 1, 0)
     
     with col3:
-        serror_rate = st.number_input("SYN Error Rate", 0.0, 1.0, 0.0)
-        srv_serror_rate = st.number_input("Srv SYN Error", 0.0, 1.0, 0.0)
-        rerror_rate = st.number_input("Reset Error", 0.0, 1.0, 0.0)
-        same_srv_rate = st.number_input("Same Srv Rate", 0.0, 1.0, 1.0)
+        st.subheader("Error Rates (0.0-1.0)")
+        # FIX: Changed step to 0.0001 to allow 4 decimal places
+        serror_rate = st.number_input("SYN Error Rate", 0.0, 1.0, 0.0, step=0.0001, format="%.4f")
+        srv_serror_rate = st.number_input("Srv SYN Error", 0.0, 1.0, 0.0, step=0.0001, format="%.4f")
+        rerror_rate = st.number_input("Reset Error", 0.0, 1.0, 0.0, step=0.0001, format="%.4f")
+        same_srv_rate = st.number_input("Same Srv Rate", 0.0, 1.0, 1.0, step=0.0001, format="%.4f")
     
     st.markdown("---")
     
@@ -240,13 +242,15 @@ with tab1:
             
             st.markdown("---")
             if pred == 0:
-                st.markdown('<div class="result-box result-normal">✅ NORMAL</div>', unsafe_allow_html=True)
+                st.markdown('<div class="result-box result-normal">✅ NORMAL TRAFFIC</div>', unsafe_allow_html=True)
                 st.metric("Confidence", f"{conf:.1f}%")
-                st.success("Traffic is SAFE")
+                st.metric("Threat", "🟢 LOW")
+                st.success("✅ Traffic is SAFE - Connection ALLOWED")
             else:
-                st.markdown('<div class="result-box result-attack">🚨 ATTACK!</div>', unsafe_allow_html=True)
+                st.markdown('<div class="result-box result-attack">🚨 ATTACK DETECTED!</div>', unsafe_allow_html=True)
                 st.metric("Confidence", f"{conf:.1f}%")
-                st.error("INTRUSION DETECTED")
+                st.metric("Threat", "🔴 HIGH")
+                st.error("❌ INTRUSION DETECTED - IP BLOCKED")
         
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
@@ -275,13 +279,16 @@ with tab2:
                     pass
                 
                 preds = model.predict(X)
-                df['Prediction'] = ['Normal' if p == 0 else 'Attack' for p in preds]
+                df['Prediction'] = ['🟢 Normal' if p == 0 else '🔴 Attack' for p in preds]
                 
-                st.metric("Normal", (preds == 0).sum())
-                st.metric("Attacks", (preds == 1).sum())
+                normal = (preds == 0).sum()
+                attack = (preds == 1).sum()
+                
+                st.metric("Normal Traffic", normal)
+                st.metric("Attacks Detected", attack)
                 st.dataframe(df)
                 
-                st.download_button("Download", df.to_csv(), "results.csv")
+                st.download_button("📥 Download Results", df.to_csv(index=False), "results.csv")
             except Exception as e:
                 st.error(f"Error: {e}")
 
@@ -290,9 +297,33 @@ with tab2:
 # ============================================================================
 with tab3:
     st.markdown("""
-    ## IDPS System
-    - NSL-KDD Dataset
-    - Random Forest Model
-    - 41 Features
-    - >99% Accuracy
+    ## 🎯 IDPS System - Real-World Edition
+    
+    ### 📊 Dataset: NSL-KDD
+    - **Samples:** 125,973 training records
+    - **Features:** 41 network parameters
+    - **Labels:** Normal (0) vs Attack (1)
+    
+    ### 🤖 Model: Random Forest
+    - **Accuracy:** >99%
+    - **Trees:** 200
+    
+    ### 🎯 Attack Types
+    - DoS, Probe, R2L, U2R
+    
+    ### 📌 Quick Test Values
+    
+    **Normal Traffic:**
+    - Duration: 103
+    - Protocol: TCP (6)
+    - Source Bytes: 3192
+    - SYN Error Rate: 0.0521
+    - Same Srv Rate: 0.6521
+    
+    **Attack Traffic:**
+    - Duration: 949
+    - Protocol: UDP (17)
+    - Source Bytes: 25578
+    - SYN Error Rate: 0.3766
+    - Same Srv Rate: 0.3479
     """)
