@@ -16,7 +16,7 @@ st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 MODEL_FILE_ID = "1ROjXla7J_wAEpaWBVPFR88pOxlZRAmbe"
 SCALER_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
 FEATURES_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
-ENCODERS_FILE_ID = "13fsMK6xKJrk9uQ0S5p-PxarUYYqrGKOT"
+ENCODERS_FILE_ID = ""
 
 # ============================================================================
 # DOWNLOAD & LOAD FILES
