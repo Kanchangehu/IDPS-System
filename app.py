@@ -65,16 +65,16 @@ def download_and_load():
     except:
         st.warning("⚠️ Feature names not loaded")
     
-    # Download Encoders
-    # label_encoders = None
-    # try:
-    #     if ENCODERS_FILE_ID != "PASTE_ENCODERS_FILE_ID_HERE":
-    #         if not os.path.exists('label_encoders.joblib'):
-    #             url = f'https://drive.google.com/uc?id={ENCODERS_FILE_ID}'
-    #             gdown.download(url, 'label_encoders.joblib', quiet=False)
-    #         label_encoders = joblib.load('label_encoders.joblib')
-    # except:
-    #     st.warning("⚠️ Encoders not loaded")
+    Download Encoders
+    label_encoders = None
+    try:
+        if ENCODERS_FILE_ID != "PASTE_ENCODERS_FILE_ID_HERE":
+            if not os.path.exists('label_encoders.joblib'):
+                url = f'https://drive.google.com/uc?id={ENCODERS_FILE_ID}'
+                gdown.download(url, 'label_encoders.joblib', quiet=False)
+            label_encoders = joblib.load('label_encoders.joblib')
+    except:
+        st.warning("⚠️ Encoders not loaded")
     
     if errors:
         for error in errors:
