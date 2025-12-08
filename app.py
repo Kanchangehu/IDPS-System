@@ -13,9 +13,9 @@ st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 # ============================================================================
 # 🔴 PASTE YOUR GOOGLE DRIVE FILE IDs HERE 🔴
 # ============================================================================
-MODEL_FILE_ID = "PASTE_MODEL_FILE_ID_HERE"
-SCALER_FILE_ID = "PASTE_SCALER_FILE_ID_HERE"
-FEATURES_FILE_ID = "PASTE_FEATURES_FILE_ID_HERE"
+MODEL_FILE_ID = "1ROjXla7J_wAEpaWBVPFR88pOxlZRAmbe"
+SCALER_FILE_ID = "1tHV0P3yPbblm_8Lds9bRMyTnSdDLvu7n"
+FEATURES_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
 
 # ============================================================================
 # FILE DOWNLOADER
