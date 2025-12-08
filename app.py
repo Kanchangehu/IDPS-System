@@ -189,42 +189,69 @@ with tab1:
     
     st.markdown("---")
     
-    # Row 2: Protocol/Service/Flag
+    # Row 2: Protocol/Service/Flag with proper dropdowns
     col4, col5, col6 = st.columns(3)
     
+    # PROTOCOL MAPPING
+    protocol_map = {
+        'tcp': 6,
+        'udp': 17,
+        'icmp': 1
+    }
+    
+    # SERVICE MAPPING (Top common services from NSL-KDD)
+    service_map = {
+        'http': 0,
+        'smtp': 1,
+        'finger': 2,
+        'domain': 3,
+        'telnet': 4,
+        'ssh': 5,
+        'ftp': 6,
+        'private': 7,
+        'pop_3': 8,
+        'nntp': 9,
+        'echo': 10,
+        'imap4': 11,
+        'other': 12
+    }
+    
+    # FLAG MAPPING (Connection flags from NSL-KDD)
+    flag_map = {
+        'SF': 0,      # SYN-FIN (Normal connection)
+        'S0': 1,      # SYN-Reset (Attack)
+        'REJ': 2,     # Rejected
+        'RSTR': 3,    # Reset
+        'S1': 4,      # SYN-Received
+        'S2': 5,      # SYN-Sent
+        'S3': 6,      # SYN-FIN-Wait
+        'FSRPAUEC': 7,# Other
+        'OTH': 8      # Other
+    }
+    
     with col4:
-        protocol = st.selectbox("Protocol Type", ['tcp', 'udp', 'icmp'])
-        if label_encoders:
-            try:
-                input_data['protocol_type'] = float(label_encoders['protocol_type'].transform([protocol])[0])
-            except:
-                input_data['protocol_type'] = 0.0
-        else:
-            input_data['protocol_type'] = 0.0
+        protocol_name = st.selectbox(
+            "Protocol Type",
+            list(protocol_map.keys()),
+            help="TCP=Normal, UDP=Data, ICMP=Ping"
+        )
+        input_data['protocol_type'] = float(protocol_map[protocol_name])
     
     with col5:
-        if label_encoders:
-            services = list(label_encoders['service'].classes_)[:30]
-            service = st.selectbox("Service", services)
-            try:
-                input_data['service'] = float(label_encoders['service'].transform([service])[0])
-            except:
-                input_data['service'] = 0.0
-        else:
-            service = st.text_input("Service")
-            input_data['service'] = 0.0
+        service_name = st.selectbox(
+            "Service",
+            list(service_map.keys()),
+            help="http=Web, smtp=Email, ftp=File Transfer, etc."
+        )
+        input_data['service'] = float(service_map[service_name])
     
     with col6:
-        if label_encoders:
-            flags = list(label_encoders['flag'].classes_)
-            flag = st.selectbox("Flag", flags)
-            try:
-                input_data['flag'] = float(label_encoders['flag'].transform([flag])[0])
-            except:
-                input_data['flag'] = 0.0
-        else:
-            flag = st.text_input("Flag")
-            input_data['flag'] = 0.0
+        flag_name = st.selectbox(
+            "Connection Flag",
+            list(flag_map.keys()),
+            help="SF=Normal, S0=SYN-Attack, REJ=Rejected"
+        )
+        input_data['flag'] = float(flag_map[flag_name])
     
     st.markdown("---")
     
