@@ -14,7 +14,7 @@ st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 # Google Drive File IDs (Update these with your new files)
 MODEL_FILE_ID = "1mM0QSUwYITYdMbVtobD8ypI4qEXDOV55"  # Replace with actual
 SCALER_FILE_ID = "1fJdATmcCzuvxrlJsdmC71rIigKF8k9PI"  # Replace with actual
-FEATURES_FILE_ID = "1fJdATmcCzuvxrlJsdmC71rIigKF8k9PI"  # Replace with actual
+FEATURES_FILE_ID = "1N95ZHeJ7AzaBfxcQV3QQ6IK7yA7BJa_z"  # Replace with actual
 ENCODERS_FILE_ID = "1GQHLaphw1Adld6ppKY57u1oDkDId4YhL"  # Replace with actual
 
 @st.cache_resource
