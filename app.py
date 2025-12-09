@@ -7,9 +7,9 @@ import os
 
 st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 
-MODEL_FILE_ID = "1Ajt1umOD-QyrBxKB7WENO48O3U0BEk2g"
-SCALER_FILE_ID = "1tIHuEQ_7Qgao34yMJz8Vgg7bHNlfYN1B"
-FEATURES_FILE_ID = "1mYQ5DKYcOO2PTZo5OeLLmTYfycuc1MCq"
+MODEL_FILE_ID = "1w46i4HIcR5vklwOt4KX9SMRpWBGNuFkf"
+SCALER_FILE_ID = "1MN5bHysFa-voIYBWx1NNcREDdX0Urnk1"
+FEATURES_FILE_ID = "1osDQyY5oWQMB5b-92bvl1pkB9c7QVs3y"
 
 @st.cache_resource
 def load_all_files_safe():
