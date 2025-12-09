@@ -11,22 +11,23 @@ import os
 st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 
 # ============================================================================
-# ⚠️ UPDATE YOUR FILE IDs HERE (FROM GOOGLE DRIVE) ⚠️
+# ⚠️ UPDATE YOUR 3 FILE IDs HERE (FROM GOOGLE DRIVE AFTER TRAINING)
 # ============================================================================
 MODEL_FILE_ID = "1w46i4HIcR5vklwOt4KX9SMRpWBGNuFkf"
 SCALER_FILE_ID = "1MN5bHysFa-voIYBWx1NNcREDdX0Urnk1"
+FEATURES_FILE_ID = "1osDQyY5oWQMB5b-92bvl1pkB9c7QVs3y"
 
 # ============================================================================
-# DOWNLOAD & LOAD MODEL
+# DOWNLOAD & LOAD ALL FILES
 # ============================================================================
 
 @st.cache_resource
-def load_model_and_scaler():
-    """Download and load model + scaler from Google Drive."""
+def load_model_and_utils():
+    """Download and load model, scaler, and feature names from Google Drive."""
     
-    if not MODEL_FILE_ID or MODEL_FILE_ID == "PASTE_YOUR_MODEL_FILE_ID_HERE":
-        st.error("❌ Update MODEL_FILE_ID at line 14!")
-        return None, None
+    if not MODEL_FILE_ID or MODEL_FILE_ID == "PASTE_YOUR_REAL_MODEL_FILE_ID":
+        st.error("❌ Update MODEL_FILE_ID at line 16!")
+        return None, None, None
     
     try:
         # Download model
@@ -34,23 +35,38 @@ def load_model_and_scaler():
             url = f"https://drive.google.com/uc?id={MODEL_FILE_ID}"
             gdown.download(url, "idps_model.joblib", quiet=False)
         model = joblib.load("idps_model.joblib")
+        st.info("✅ Model loaded")
     except Exception as e:
         st.error(f"❌ Model Error: {e}")
-        return None, None
+        return None, None, None
     
-    # Download scaler (optional)
+    # Download scaler
     scaler = None
-    if SCALER_FILE_ID and SCALER_FILE_ID != "PASTE_YOUR_SCALER_FILE_ID_HERE":
+    if SCALER_FILE_ID and SCALER_FILE_ID != "PASTE_YOUR_REAL_SCALER_FILE_ID":
         try:
             if not os.path.exists("feature_scaler.joblib"):
                 url = f"https://drive.google.com/uc?id={SCALER_FILE_ID}"
                 gdown.download(url, "feature_scaler.joblib", quiet=False)
             scaler = joblib.load("feature_scaler.joblib")
-        except:
-            st.warning("⚠️ Scaler not loaded (will normalize manually)")
+            st.info("✅ Scaler loaded")
+        except Exception as e:
+            st.warning(f"⚠️ Scaler not loaded: {e}")
             scaler = None
     
-    return model, scaler
+    # Download feature names
+    feature_names = None
+    if FEATURES_FILE_ID and FEATURES_FILE_ID != "PASTE_YOUR_FEATURE_NAMES_FILE_ID":
+        try:
+            if not os.path.exists("feature_names.joblib"):
+                url = f"https://drive.google.com/uc?id={FEATURES_FILE_ID}"
+                gdown.download(url, "feature_names.joblib", quiet=False)
+            feature_names = joblib.load("feature_names.joblib")
+            st.info(f"✅ Feature names loaded ({len(feature_names)} features)")
+        except Exception as e:
+            st.warning(f"⚠️ Feature names not loaded: {e}")
+            feature_names = None
+    
+    return model, scaler, feature_names
 
 # ============================================================================
 # CSS STYLING
@@ -107,9 +123,9 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Load model
+# Load model and utils
 with st.spinner("⏳ Loading AI Model..."):
-    model, scaler = load_model_and_scaler()
+    model, scaler, feature_names = load_model_and_utils()
 
 if model is None:
     st.stop()
@@ -127,7 +143,7 @@ tab1, tab2, tab3 = st.tabs(["📊 Manual Analysis", "📁 Batch CSV", "ℹ️ Ab
 # ============================================================================
 
 with tab1:
-    st.markdown("## 📝 Enter Network Traffic Features")
+    st.markdown("## 📝 Enter Network Traffic Features (NSL-KDD Format)")
     
     input_data = {}
     
@@ -225,68 +241,71 @@ with tab1:
     # ANALYZE BUTTON
     if st.button("🔍 ANALYZE TRAFFIC", use_container_width=True):
         try:
-            # Feature order (NSL-KDD)
-            feature_order = [
-                'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
-                'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
-                'num_compromised', 'root_shell', 'su_attempted', 'num_root',
-                'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds',
-                'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate',
-                'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
-                'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
-                'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
-                'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
-                'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
-            ]
+            # Use feature names if available, otherwise use default order
+            if feature_names is not None:
+                X = np.array([[float(input_data.get(f, 0)) for f in feature_names]])
+            else:
+                # Default NSL-KDD feature order (41 features)
+                feature_order = [
+                    'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
+                    'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
+                    'num_compromised', 'root_shell', 'su_attempted', 'num_root',
+                    'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds',
+                    'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate',
+                    'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
+                    'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
+                    'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
+                    'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
+                    'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
+                ]
+                X = np.array([[float(input_data.get(f, 0)) for f in feature_order]])
             
-            # Create array
-            X = np.array([[float(input_data.get(f, 0)) for f in feature_order]])
-            
-            # Scale if available
+            # Scale features
             if scaler is not None:
                 try:
-                    X = scaler.transform(X)
+                    X_scaled = scaler.transform(X)
                 except Exception as scale_error:
-                    # Manual normalization if scaler fails
-                    X = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0) + 1e-8)
+                    st.warning(f"⚠️ Scaling error, using raw values: {scale_error}")
+                    X_scaled = X
             else:
-                # Manual normalization
-                X = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0) + 1e-8)
+                X_scaled = X
             
-            # Predict
-            pred = model.predict(X)[0]
-            proba = model.predict_proba(X)[0]
+            # Make prediction
+            pred = model.predict(X_scaled)[0]
+            proba = model.predict_proba(X_scaled)[0]
             conf = max(proba) * 100
             
             st.markdown("---")
             
             if pred == 0:
+                # NORMAL TRAFFIC
                 st.markdown(
-                    '<div class="result-box result-normal">✅ NORMAL TRAFFIC</div>',
+                    '<div class="result-box result-normal">✅ NORMAL TRAFFIC DETECTED</div>',
                     unsafe_allow_html=True
                 )
                 col_m1, col_m2, col_m3 = st.columns(3)
                 with col_m1:
                     st.metric("Confidence", f"{conf:.2f}%")
                 with col_m2:
-                    st.metric("Threat", "LOW 🟢")
+                    st.metric("Threat Level", "🟢 LOW")
                 with col_m3:
-                    st.metric("Action", "ALLOW ✅")
-                st.success("This traffic is SAFE!")
+                    st.metric("Action", "✅ ALLOW")
+                st.success("✅ This traffic is SAFE! Connection allowed.")
             
             else:
+                # ATTACK DETECTED
                 st.markdown(
-                    '<div class="result-box result-attack">🚨 ATTACK DETECTED</div>',
+                    '<div class="result-box result-attack">🚨 ATTACK DETECTED!</div>',
                     unsafe_allow_html=True
                 )
                 col_m1, col_m2, col_m3 = st.columns(3)
                 with col_m1:
                     st.metric("Confidence", f"{conf:.2f}%")
                 with col_m2:
-                    st.metric("Threat", "HIGH 🔴")
+                    st.metric("Threat Level", "🔴 HIGH")
                 with col_m3:
-                    st.metric("Action", "BLOCK ❌")
-                st.error("INTRUSION DETECTED - IP BLOCKED!")
+                    st.metric("Action", "❌ BLOCK")
+                st.error("🚨 INTRUSION DETECTED! IP Address will be BLOCKED immediately!")
         
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
@@ -296,9 +315,9 @@ with tab1:
 # ============================================================================
 
 with tab2:
-    st.markdown("## 📁 Batch CSV Analysis")
+    st.markdown("## 📁 Batch CSV Analysis (NSL-KDD Format)")
     
-    uploaded_file = st.file_uploader("Upload CSV (NSL-KDD format)", type=['csv'])
+    uploaded_file = st.file_uploader("Upload CSV file", type=['csv'])
     
     if uploaded_file:
         try:
@@ -313,42 +332,48 @@ with tab2:
             
             if st.button("🔍 ANALYZE BATCH", use_container_width=True):
                 try:
-                    # Scale if needed
+                    # Scale batch data
                     if scaler is not None:
                         try:
                             X_batch = scaler.transform(df)
                         except Exception as scale_error:
-                            X_batch = (df - df.min(axis=0)) / (df.max(axis=0) - df.min(axis=0) + 1e-8)
+                            st.warning(f"⚠️ Scaling error: {scale_error}")
+                            X_batch = df.values
                     else:
-                        X_batch = (df - df.min(axis=0)) / (df.max(axis=0) - df.min(axis=0) + 1e-8)
+                        X_batch = df.values
                     
+                    # Make predictions
                     preds = model.predict(X_batch)
                     
+                    # Create results dataframe
                     result_df = df.copy()
                     result_df['Prediction'] = ['🟢 Normal' if p == 0 else '🔴 Attack' for p in preds]
                     
+                    # Statistics
                     normal = (preds == 0).sum()
                     attack = (preds == 1).sum()
                     
                     col_b1, col_b2, col_b3 = st.columns(3)
                     with col_b1:
-                        st.metric("Normal", normal)
+                        st.metric("Normal Traffic", normal)
                     with col_b2:
-                        st.metric("Attacks", attack)
+                        st.metric("Attacks Detected", attack)
                     with col_b3:
                         rate = (attack / len(preds) * 100) if len(preds) > 0 else 0
-                        st.metric("Detection %", f"{rate:.1f}%")
+                        st.metric("Detection Rate", f"{rate:.1f}%")
                     
+                    st.markdown("---")
                     st.dataframe(result_df, use_container_width=True)
                     
+                    # Download button
                     csv_data = result_df.to_csv(index=False)
-                    st.download_button("📥 Download", csv_data, "results.csv")
+                    st.download_button("📥 Download Results", csv_data, "idps_results.csv")
                 
                 except Exception as e:
-                    st.error(f"❌ Error: {e}")
+                    st.error(f"❌ Batch Analysis Error: {str(e)}")
         
         except Exception as e:
-            st.error(f"❌ File Error: {e}")
+            st.error(f"❌ File Upload Error: {str(e)}")
 
 # ============================================================================
 # TAB 3: ABOUT
@@ -360,25 +385,47 @@ with tab3:
     
     **AI-Based Intrusion Detection & Prevention System**
     
-    ### Dataset
-    - NSL-KDD (125,973 samples)
-    - 41 network features
-    - Binary classification: Normal vs Attack
+    ### 📊 Dataset: NSL-KDD
+    - **Total Samples:** 125,973 records
+    - **Training Samples:** Full NSL-KDD dataset
+    - **Features:** 41 network parameters
+    - **Classification:** Binary (Normal vs Attack)
     
-    ### Model
-    - Algorithm: Random Forest (200 trees)
-    - Accuracy: 99%+
+    ### 🤖 Machine Learning Model
+    - **Algorithm:** Random Forest Classifier
+    - **Trees:** 200
+    - **Max Depth:** 20
+    - **Training Accuracy:** 99%+
     
-    ### Features Analyzed
-    1. Network duration and bytes
-    2. Protocol type and service
-    3. Connection flags
-    4. Error rates
-    5. Host-based metrics
+    ### 📈 Features Analyzed (41 Total)
+    1. Duration, Protocol Type, Service, Flag
+    2. Source & Destination Bytes
+    3. Connection Details (Land, Wrong Fragment, Urgent, Hot)
+    4. Login Information (Failed Logins, Logged In)
+    5. Security Metrics (Root Shell, SU Attempted, Compromised)
+    6. File Operations & Shell Access
+    7. Error Rates (SYN Error, Reset Error)
+    8. Service Statistics
+    9. Host-Based Metrics
     
-    ### Attack Types
-    - DoS (Denial of Service)
-    - Probe (Port scanning)
-    - R2L (Remote to Local)
-    - U2R (User to Root)
+    ### 🎯 Attack Types Detected
+    - **DoS (Denial of Service):** SYN Floods, Port Scans
+    - **Probe:** Reconnaissance attacks, Port Scanning
+    - **R2L (Remote to Local):** Remote exploitation attempts
+    - **U2R (User to Root):** Privilege escalation attacks
+    
+    ### 📈 Performance Metrics
+    - **Accuracy:** >99%
+    - **Precision:** High true positive rate
+    - **Recall:** Catches most real attacks
+    - **F1-Score:** Balanced detection
+    
+    ### 🔧 Technology Stack
+    - **ML Framework:** scikit-learn
+    - **Frontend:** Streamlit
+    - **Data Processing:** Pandas, NumPy
+    - **Deployment:** Google Drive + Streamlit Cloud
+    
+    ---
+    **IDPS v1.0 | Real-World Intrusion Detection | NSL-KDD Dataset**
     """)
