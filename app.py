@@ -243,8 +243,12 @@ with tab1:
             X = np.array([[float(input_data.get(f, 0)) for f in feature_order]])
             
             # Scale if available
-            if scaler:
-                X = scaler.transform(X)
+            if scaler is not None:
+                try:
+                    X = scaler.transform(X)
+                except Exception as scale_error:
+                    # Manual normalization if scaler fails
+                    X = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0) + 1e-8)
             else:
                 # Manual normalization
                 X = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0) + 1e-8)
@@ -310,8 +314,11 @@ with tab2:
             if st.button("🔍 ANALYZE BATCH", use_container_width=True):
                 try:
                     # Scale if needed
-                    if scaler:
-                        X_batch = scaler.transform(df)
+                    if scaler is not None:
+                        try:
+                            X_batch = scaler.transform(df)
+                        except Exception as scale_error:
+                            X_batch = (df - df.min(axis=0)) / (df.max(axis=0) - df.min(axis=0) + 1e-8)
                     else:
                         X_batch = (df - df.min(axis=0)) / (df.max(axis=0) - df.min(axis=0) + 1e-8)
                     
