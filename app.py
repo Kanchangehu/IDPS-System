@@ -1,3 +1,7 @@
+# ============================================================================
+# app.py - CORRECTED VERSION
+# ============================================================================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,44 +11,58 @@ import os
 
 st.set_page_config(page_title="IDPS System", page_icon="🛡️", layout="wide")
 
-MODEL_FILE_ID = "1ROjXla7J_wAEpaWBVPFR88pOxlZRAmbe"
-SCALER_FILE_ID = "1tHV0P3yPbblm_8Lds9bRMyTnSdDLvu7n"
-FEATURES_FILE_ID = "1fbREKxsJ4n3m_n1n6ExrQzpmeaXG9DIx"
+# Google Drive File IDs (Update these with your new files)
+MODEL_FILE_ID = "1mM0QSUwYITYdMbVtobD8ypI4qEXDOV55"  # Replace with actual
+SCALER_FILE_ID = "1fJdATmcCzuvxrlJsdmC71rIigKF8k9PI"  # Replace with actual
+FEATURES_FILE_ID = "1fJdATmcCzuvxrlJsdmC71rIigKF8k9PI"  # Replace with actual
+ENCODERS_FILE_ID = "1GQHLaphw1Adld6ppKY57u1oDkDId4YhL"  # Replace with actual
 
 @st.cache_resource
-def load_all_files_safe():
-    """Load model, scaler, and feature names"""
-    model = None
-    scaler = None
-    feature_names = None
+def load_all_files():
+    """Load all necessary files"""
+    files = {}
     
+    # Model
     try:
         if not os.path.exists('idps_model.joblib'):
             gdown.download(f'https://drive.google.com/uc?id={MODEL_FILE_ID}', 'idps_model.joblib', quiet=False)
-        model = joblib.load('idps_model.joblib')
-        st.success(f"✅ Model loaded: {type(model).__name__}")
+        files['model'] = joblib.load('idps_model.joblib')
+        st.success(f"✅ Model loaded: {type(files['model']).__name__}")
     except Exception as e:
         st.error(f"❌ Model error: {e}")
-        return None, None, None
+        return None
     
+    # Scaler
     try:
         if not os.path.exists('feature_scaler.joblib'):
             gdown.download(f'https://drive.google.com/uc?id={SCALER_FILE_ID}', 'feature_scaler.joblib', quiet=False)
-        scaler = joblib.load('feature_scaler.joblib')
-        st.success(f"✅ Scaler loaded: {type(scaler).__name__}")
-    except Exception as e:
-        st.warning(f"⚠️ Scaler not available, will use raw values")
-        scaler = None
+        files['scaler'] = joblib.load('feature_scaler.joblib')
+        st.success(f"✅ Scaler loaded")
+    except:
+        st.warning("⚠️ Scaler not available")
+        files['scaler'] = None
     
+    # Features
     try:
         if not os.path.exists('feature_names.joblib'):
             gdown.download(f'https://drive.google.com/uc?id={FEATURES_FILE_ID}', 'feature_names.joblib', quiet=False)
-        feature_names = joblib.load('feature_names.joblib')
-        st.success(f"✅ Features loaded: {len(feature_names)} features")
-    except Exception as e:
-        st.warning(f"⚠️ Features not available")
+        files['features'] = joblib.load('feature_names.joblib')
+        st.success(f"✅ {len(files['features'])} features loaded")
+    except:
+        st.warning("⚠️ Features not available")
+        files['features'] = None
     
-    return model, scaler, feature_names
+    # Encoders
+    try:
+        if not os.path.exists('label_encoders.joblib'):
+            gdown.download(f'https://drive.google.com/uc?id={ENCODERS_FILE_ID}', 'label_encoders.joblib', quiet=False)
+        files['encoders'] = joblib.load('label_encoders.joblib')
+        st.success(f"✅ Encoders loaded")
+    except:
+        st.warning("⚠️ Encoders not available")
+        files['encoders'] = None
+    
+    return files
 
 # ============================================================================
 # CSS STYLING
@@ -72,6 +90,7 @@ st.markdown("""
             color: white;
             font-size: 1.5em;
             font-weight: bold;
+            margin: 20px 0;
         }
         .result-attack {
             background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
@@ -81,266 +100,357 @@ st.markdown("""
             color: white;
             font-size: 1.5em;
             font-weight: bold;
+            margin: 20px 0;
+        }
+        .feature-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #0066cc;
+            margin: 10px 0;
         }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="header-container"><p class="header-title">🛡️ IDPS - AI Intrusion Detection System</p></div>', unsafe_allow_html=True)
+# ============================================================================
+# HEADER
+# ============================================================================
+st.markdown('<div class="header-container"><p class="header-title">🛡️ AI-Powered IDPS System</p></div>', unsafe_allow_html=True)
 
-# Load files
-model, scaler, feature_names = load_all_files_safe()
+# ============================================================================
+# LOAD FILES
+# ============================================================================
+with st.spinner("Loading AI model..."):
+    files = load_all_files()
 
-if model is None:
-    st.error("❌ Cannot load model. Check FILE_IDs!")
+if not files or 'model' not in files:
+    st.error("❌ Failed to load model. Please check file IDs!")
     st.stop()
 
-st.success("✅ System Ready!")
+st.success("✅ System Ready for Intrusion Detection!")
 
 # ============================================================================
 # TABS
 # ============================================================================
-tab1, tab2, tab3 = st.tabs(["📊 Manual Analysis", "📁 Batch CSV", "ℹ️ About"])
+tab1, tab2, tab3, tab4 = st.tabs(["🔍 Real-time Detection", "📁 Batch Analysis", "📊 System Info", "🛠️ Test Samples"])
 
 # ============================================================================
-# TAB 1: MANUAL ANALYSIS
+# TAB 1: REAL-TIME DETECTION
 # ============================================================================
 with tab1:
-    st.markdown("## 📝 Enter Network Traffic Features")
+    st.markdown("## 🔍 Real-time Network Traffic Analysis")
+    st.info("Enter network traffic parameters below for real-time analysis")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.subheader("Basic Parameters")
-        duration = st.number_input("Duration (seconds)", 0, 100000, 45)
-        src_bytes = st.number_input("Source Bytes", 0, 1000000, 1024)
-        dst_bytes = st.number_input("Dest Bytes", 0, 1000000, 2048)
-        land = st.number_input("Land (0/1)", 0, 1, 0)
+        st.subheader("Connection Features")
+        duration = st.number_input("Duration (seconds)", 0.0, 100000.0, 0.0, step=0.1)
+        protocol_type = st.selectbox("Protocol Type", ["tcp", "udp", "icmp"], index=0)
+        service = st.selectbox("Service", ["http", "smtp", "ftp", "ssh", "domain_u", "private", "eco_i", "ecr_i"], index=0)
+        flag = st.selectbox("Connection Flag", ["SF", "S0", "REJ", "RSTR", "SH", "RSTO", "S1", "S2", "S3"], index=0)
     
     with col2:
-        st.subheader("Connection Info")
-        urgent = st.number_input("Urgent", 0, 100, 0)
-        hot = st.number_input("Hot", 0, 100, 0)
-        num_failed_logins = st.number_input("Failed Logins", 0, 100, 0)
-        logged_in = st.number_input("Logged In (0/1)", 0, 1, 1)
+        st.subheader("Traffic Volume")
+        src_bytes = st.number_input("Source Bytes", 0, 1000000, 0)
+        dst_bytes = st.number_input("Destination Bytes", 0, 1000000, 0)
+        count = st.number_input("Connection Count", 0, 500, 0)
+        srv_count = st.number_input("Service Count", 0, 500, 0)
     
     with col3:
-        st.subheader("Error Rates (0.0-1.0)")
-        serror_rate = st.number_input("SYN Error Rate", 0.0, 1.0, 0.0, step=0.0001, format="%.4f")
-        srv_serror_rate = st.number_input("Srv SYN Error", 0.0, 1.0, 0.0, step=0.0001, format="%.4f")
-        rerror_rate = st.number_input("Reset Error Rate", 0.0, 1.0, 0.0, step=0.0001, format="%.4f")
-        same_srv_rate = st.number_input("Same Srv Rate", 0.0, 1.0, 1.0, step=0.0001, format="%.4f")
+        st.subheader("Error Rates")
+        serror_rate = st.slider("SYN Error Rate", 0.0, 1.0, 0.0, 0.01)
+        srv_serror_rate = st.slider("Service SYN Error Rate", 0.0, 1.0, 0.0, 0.01)
+        rerror_rate = st.slider("REJ Error Rate", 0.0, 1.0, 0.0, 0.01)
+        same_srv_rate = st.slider("Same Service Rate", 0.0, 1.0, 0.0, 0.01)
+    
+    # Advanced features (collapsible)
+    with st.expander("⚙️ Advanced Features"):
+        col4, col5 = st.columns(2)
+        with col4:
+            logged_in = st.selectbox("Logged In", [0, 1], index=0)
+            num_failed_logins = st.number_input("Failed Logins", 0, 10, 0)
+            urgent = st.number_input("Urgent Packets", 0, 100, 0)
+            hot = st.number_input("Hot Indicators", 0, 100, 0)
+        
+        with col5:
+            wrong_fragment = st.number_input("Wrong Fragments", 0, 10, 0)
+            num_root = st.number_input("Root Accesses", 0, 10, 0)
+            num_file_creations = st.number_input("File Creations", 0, 10, 0)
+            num_shells = st.number_input("Shell Prompts", 0, 10, 0)
     
     st.markdown("---")
     
-    protocol = st.radio("Protocol Type", ["TCP (6)", "UDP (17)", "ICMP (1)"], horizontal=True, index=0)
-    service = st.radio("Service", ["HTTP (0)", "SMTP (1)", "FTP (6)", "SSH (5)"], horizontal=True, index=0)
-    flag = st.radio("Flag", ["SF (0)", "S0 (1)", "REJ (2)", "SH (7)"], horizontal=True, index=0)
-    
-    protocol_num = int(protocol.split("(")[1].split(")")[0])
-    service_num = int(service.split("(")[1].split(")")[0])
-    flag_num = int(flag.split("(")[1].split(")")[0])
-    
-    if st.button("🔍 ANALYZE TRAFFIC", use_container_width=True):
+    if st.button("🚀 ANALYZE TRAFFIC", type="primary", use_container_width=True):
         try:
-            # Build input dictionary with all 41 features
-            input_dict = {
-                'duration': float(duration),
-                'protocol_type': float(protocol_num),
-                'service': float(service_num),
-                'flag': float(flag_num),
-                'src_bytes': float(src_bytes),
-                'dst_bytes': float(dst_bytes),
-                'land': float(land),
-                'wrong_fragment': 0.0,
-                'urgent': float(urgent),
-                'hot': float(hot),
-                'num_failed_logins': float(num_failed_logins),
-                'logged_in': float(logged_in),
-                'num_compromised': 0.0,
-                'root_shell': 0.0,
-                'su_attempted': 0.0,
-                'num_root': 0.0,
-                'num_file_creations': 0.0,
-                'num_shells': 0.0,
-                'num_access_files': 0.0,
-                'num_outbound_cmds': 0.0,
-                'is_host_login': 0.0,
-                'is_guest_login': 0.0,
-                'count': 50.0,
-                'srv_count': 50.0,
-                'serror_rate': float(serror_rate),
-                'srv_serror_rate': float(srv_serror_rate),
-                'rerror_rate': float(rerror_rate),
+            # Prepare input dictionary
+            input_data = {
+                'duration': duration,
+                'protocol_type': protocol_type,
+                'service': service,
+                'flag': flag,
+                'src_bytes': src_bytes,
+                'dst_bytes': dst_bytes,
+                'land': 0,
+                'wrong_fragment': wrong_fragment,
+                'urgent': urgent,
+                'hot': hot,
+                'num_failed_logins': num_failed_logins,
+                'logged_in': logged_in,
+                'num_compromised': 0,
+                'root_shell': 0,
+                'su_attempted': 0,
+                'num_root': num_root,
+                'num_file_creations': num_file_creations,
+                'num_shells': num_shells,
+                'num_access_files': 0,
+                'num_outbound_cmds': 0,
+                'is_host_login': 0,
+                'is_guest_login': 0,
+                'count': count,
+                'srv_count': srv_count,
+                'serror_rate': serror_rate,
+                'srv_serror_rate': srv_serror_rate,
+                'rerror_rate': rerror_rate,
                 'srv_rerror_rate': 0.0,
-                'same_srv_rate': float(same_srv_rate),
-                'diff_srv_rate': 0.1,
-                'srv_diff_host_rate': 0.05,
-                'dst_host_count': 100.0,
-                'dst_host_srv_count': 100.0,
-                'dst_host_same_srv_rate': 0.9,
-                'dst_host_diff_srv_rate': 0.1,
-                'dst_host_same_src_port_rate': 0.5,
-                'dst_host_srv_diff_host_rate': 0.05,
-                'dst_host_serror_rate': 0.0,
-                'dst_host_srv_serror_rate': 0.0,
-                'dst_host_rerror_rate': 0.0,
+                'same_srv_rate': same_srv_rate,
+                'diff_srv_rate': 0.0,
+                'srv_diff_host_rate': 0.0,
+                'dst_host_count': 100,
+                'dst_host_srv_count': 50,
+                'dst_host_same_srv_rate': 0.5,
+                'dst_host_diff_srv_rate': 0.5,
+                'dst_host_same_src_port_rate': 0.0,
+                'dst_host_srv_diff_host_rate': 0.0,
+                'dst_host_serror_rate': serror_rate,
+                'dst_host_srv_serror_rate': srv_serror_rate,
+                'dst_host_rerror_rate': rerror_rate,
                 'dst_host_srv_rerror_rate': 0.0
             }
             
-            # Feature order (EXACT NSL-KDD)
-            feature_order = [
-                'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
-                'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
-                'num_compromised', 'root_shell', 'su_attempted', 'num_root',
-                'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds',
-                'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate',
-                'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
-                'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
-                'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
-                'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
-                'dst_host_rerror_rate', 'dst_host_srv_rerror_rate'
-            ]
+            # Convert to DataFrame
+            input_df = pd.DataFrame([input_data])
             
-            # Create feature array
-            X = np.array([[input_dict[f] for f in feature_order]])
+            # Encode categorical features
+            if 'encoders' in files and files['encoders']:
+                for col in ['protocol_type', 'service', 'flag']:
+                    if col in input_df.columns and col in files['encoders']:
+                        le = files['encoders'][col]
+                        # Handle unseen labels
+                        input_df[col] = input_df[col].apply(lambda x: le.transform([x])[0] if x in le.classes_ else 0)
             
-            # Apply scaler if available
-            if scaler is not None and not isinstance(scaler, (list, dict)):
-                try:
-                    X = scaler.transform(X)
-                except:
-                    pass
+            # Ensure correct feature order
+            if 'features' in files and files['features']:
+                input_df = input_df[files['features']]
+            
+            # Scale features
+            if 'scaler' in files and files['scaler']:
+                input_scaled = files['scaler'].transform(input_df)
+            else:
+                input_scaled = input_df.values
             
             # Make prediction
-            prediction = model.predict(X)[0]
+            model = files['model']
+            prediction = model.predict(input_scaled)[0]
+            probabilities = model.predict_proba(input_scaled)[0]
             
-            # Get probabilities - SAFE WAY
-            proba = model.predict_proba(X)[0]
-            
-            # Handle case where proba might have different shape
-            if len(proba) == 2:
-                normal_prob = proba[0] * 100
-                attack_prob = proba[1] * 100
-            else:
-                # Single class prediction
-                normal_prob = 50.0
-                attack_prob = 50.0
-            
-            confidence = max(normal_prob, attack_prob)
-            
+            # Display results
             st.markdown("---")
+            st.markdown("## 📊 Analysis Results")
             
             if prediction == 0:
-                # NORMAL TRAFFIC
                 st.markdown('<div class="result-normal">✅ NORMAL TRAFFIC DETECTED</div>', unsafe_allow_html=True)
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Confidence", f"{confidence:.1f}%")
-                with col2:
-                    st.metric("Threat Level", "🟢 LOW")
-                with col3:
-                    st.metric("Action", "✅ ALLOW")
-                st.success("✅ This traffic is SAFE. Connection ALLOWED!")
             else:
-                # ATTACK DETECTED
                 st.markdown('<div class="result-attack">🚨 ATTACK DETECTED!</div>', unsafe_allow_html=True)
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Confidence", f"{confidence:.1f}%")
-                with col2:
-                    st.metric("Threat Level", "🔴 HIGH")
-                with col3:
-                    st.metric("Action", "❌ BLOCK")
-                st.error("⚠️ INTRUSION DETECTED! IP address BLOCKED immediately!")
+            
+            # Metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Prediction", "Normal" if prediction == 0 else "Attack")
+            with col2:
+                st.metric("Confidence", f"{max(probabilities)*100:.1f}%")
+            with col3:
+                st.metric("Normal Probability", f"{probabilities[0]*100:.1f}%")
+            with col4:
+                st.metric("Attack Probability", f"{probabilities[1]*100:.1f}%")
+            
+            # Recommendations
+            if prediction == 0:
+                st.success("✅ **Recommendation:** Traffic appears normal. Continue monitoring.")
+            else:
+                st.error("🚨 **Recommendation:** Immediate action required! Consider:")
+                st.warning("1. Block source IP address\n2. Alert security team\n3. Isolate affected systems\n4. Review logs for similar patterns")
         
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.error(f"❌ Error during analysis: {str(e)}")
+            st.info("💡 Tip: Ensure all categorical values match training data categories.")
 
 # ============================================================================
-# TAB 2: BATCH CSV ANALYSIS
+# TAB 2: BATCH ANALYSIS
 # ============================================================================
 with tab2:
     st.markdown("## 📁 Batch CSV Analysis")
-    st.info("📌 Upload CSV with NSL-KDD format (41 features)")
     
-    file = st.file_uploader("Upload CSV file", type=['csv'])
+    uploaded_file = st.file_uploader("Upload CSV file with network traffic data", type=['csv'])
     
-    if file:
+    if uploaded_file:
         try:
-            df = pd.read_csv(file)
-            st.dataframe(df.head(10), use_container_width=True)
+            df = pd.read_csv(uploaded_file)
+            st.success(f"✅ File loaded: {df.shape[0]} rows, {df.shape[1]} columns")
             
-            if st.button("🔍 ANALYZE BATCH", use_container_width=True):
-                try:
-                    # Use feature_names if available
-                    if feature_names and len(feature_names) > 0:
-                        cols = feature_names
+            if st.button("🔍 ANALYZE BATCH", type="primary"):
+                with st.spinner("Analyzing..."):
+                    # Preprocess
+                    if 'encoders' in files and files['encoders']:
+                        df_encoded = df.copy()
+                        for col in ['protocol_type', 'service', 'flag']:
+                            if col in df_encoded.columns and col in files['encoders']:
+                                le = files['encoders'][col]
+                                df_encoded[col] = df_encoded[col].apply(lambda x: le.transform([x])[0] if x in le.classes_ else 0)
+                    
+                    # Scale
+                    if 'scaler' in files and files['scaler']:
+                        X_scaled = files['scaler'].transform(df_encoded)
                     else:
-                        cols = df.columns.tolist()
-                    
-                    X = df[cols]
-                    
-                    # Scale if scaler available
-                    if scaler is not None and not isinstance(scaler, (list, dict)):
-                        try:
-                            X = scaler.transform(X)
-                        except:
-                            pass
+                        X_scaled = df_encoded.values
                     
                     # Predict
-                    predictions = model.predict(X)
+                    predictions = files['model'].predict(X_scaled)
+                    probabilities = files['model'].predict_proba(X_scaled)
                     
-                    # Add results
-                    df['Prediction'] = ['🟢 Normal' if p == 0 else '🔴 Attack' for p in predictions]
+                    # Add results to dataframe
+                    df['Prediction'] = ['Normal' if p == 0 else 'Attack' for p in predictions]
+                    df['Confidence'] = [max(prob) * 100 for prob in probabilities]
+                    df['Normal_Prob'] = [prob[0] * 100 for prob in probabilities]
+                    df['Attack_Prob'] = [prob[1] * 100 for prob in probabilities]
                     
+                    # Display summary
                     normal_count = (predictions == 0).sum()
                     attack_count = (predictions == 1).sum()
                     
-                    # Display metrics
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric("Normal Traffic", normal_count)
                     with col2:
                         st.metric("Attacks Detected", attack_count)
                     with col3:
-                        rate = (attack_count / len(predictions) * 100) if len(predictions) > 0 else 0
-                        st.metric("Detection Rate", f"{rate:.1f}%")
+                        detection_rate = attack_count / len(predictions) * 100 if len(predictions) > 0 else 0
+                        st.metric("Detection Rate", f"{detection_rate:.1f}%")
                     
-                    st.markdown("---")
-                    st.dataframe(df, use_container_width=True)
+                    # Display results
+                    st.dataframe(df)
                     
                     # Download button
-                    csv_data = df.to_csv(index=False)
-                    st.download_button("📥 Download Results", csv_data, "idps_results.csv", "text/csv")
-                
-                except Exception as e:
-                    st.error(f"❌ Analysis Error: {str(e)}")
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Results",
+                        data=csv,
+                        file_name="idps_analysis_results.csv",
+                        mime="text/csv"
+                    )
+        
         except Exception as e:
-            st.error(f"❌ File Error: {str(e)}")
+            st.error(f"❌ Error processing file: {str(e)}")
 
 # ============================================================================
-# TAB 3: ABOUT
+# TAB 3: SYSTEM INFO
 # ============================================================================
 with tab3:
-    st.markdown("""
-    ## 🎯 IDPS System - Real-World Edition
+    st.markdown("## 📊 System Information")
     
-    ### 📊 Dataset: NSL-KDD
-    - **Samples:** 125,973 training records
-    - **Features:** 41 network parameters
-    - **Labels:** Normal (0) vs Attack (1)
+    col1, col2 = st.columns(2)
     
-    ### 🤖 Model: Random Forest
-    - **Accuracy:** >99%
-    - **Trees:** 200
+    with col1:
+        st.info("### 🎯 Model Details")
+        if 'model' in files:
+            model = files['model']
+            st.write(f"**Type:** {type(model).__name__}")
+            if hasattr(model, 'n_estimators'):
+                st.write(f"**Trees:** {model.n_estimators}")
+            if hasattr(model, 'n_features_in_'):
+                st.write(f"**Features:** {model.n_features_in_}")
     
-    ### 🎯 Attack Types Detected
-    - DoS, Probe, R2L, U2R
+    with col2:
+        st.info("### 📁 Loaded Components")
+        components = []
+        if 'model' in files: components.append("✅ Model")
+        if 'scaler' in files and files['scaler']: components.append("✅ Scaler")
+        if 'features' in files and files['features']: components.append("✅ Features")
+        if 'encoders' in files and files['encoders']: components.append("✅ Encoders")
+        
+        for comp in components:
+            st.write(comp)
     
-    ### 📌 Test Values
-    **Normal Traffic:** All error rates = 0.0, Protocol = TCP, Service = HTTP/SMTP/FTP/SSH
-    **Attack Traffic:** High error rates, suspicious flags, unusual byte counts
-    
-    ---
-    *IDPS v5.0 | Production Ready | December 2025*
+    st.markdown("---")
+    st.markdown("### 📚 NSL-KDD Dataset Info")
+    st.write("""
+    - **Total Features:** 41 network parameters
+    - **Attack Types:** DOS, Probe, R2L, U2R
+    - **Normal Samples:** ~67,000
+    - **Attack Samples:** ~58,000
+    - **Accuracy Target:** >99%
     """)
+
+# ============================================================================
+# TAB 4: TEST SAMPLES
+# ============================================================================
+with tab4:
+    st.markdown("## 🛠️ Test with Sample Data")
+    
+    st.info("Use these pre-defined samples to test the system")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🧪 Test Normal Traffic", use_container_width=True):
+            # Sample normal traffic values
+            normal_sample = {
+                'duration': 0.0,
+                'protocol_type': 'tcp',
+                'service': 'http',
+                'flag': 'SF',
+                'src_bytes': 100,
+                'dst_bytes': 200,
+                'count': 10,
+                'srv_count': 5,
+                'serror_rate': 0.0,
+                'srv_serror_rate': 0.0,
+                'rerror_rate': 0.0,
+                'same_srv_rate': 0.8,
+                'logged_in': 1,
+                'num_failed_logins': 0
+            }
+            
+            # Set values in session state for tab1
+            for key, value in normal_sample.items():
+                if key in st.session_state:
+                    st.session_state[key] = value
+            
+            st.success("✅ Normal sample loaded! Switch to 'Real-time Detection' tab")
+    
+    with col2:
+        if st.button("🚨 Test Attack Traffic", use_container_width=True):
+            # Sample attack traffic values
+            attack_sample = {
+                'duration': 1000.0,
+                'protocol_type': 'tcp',
+                'service': 'http',
+                'flag': 'S0',
+                'src_bytes': 100000,
+                'dst_bytes': 0,
+                'count': 200,
+                'srv_count': 200,
+                'serror_rate': 1.0,
+                'srv_serror_rate': 1.0,
+                'rerror_rate': 1.0,
+                'same_srv_rate': 0.0,
+                'logged_in': 0,
+                'num_failed_logins': 5
+            }
+            
+            # Set values in session state
+            for key, value in attack_sample.items():
+                if key in st.session_state:
+                    st.session_state[key] = value
+            
+            st.warning("⚠️ Attack sample loaded! Switch to 'Real-time Detection' tab")
